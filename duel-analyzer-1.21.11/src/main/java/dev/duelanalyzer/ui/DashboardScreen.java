@@ -44,7 +44,7 @@ public class DashboardScreen extends GlassScreen {
         text(g, "Duel Analyzer", px + 12, py + 10, accent());
         g.fill(px + sw, py + 8, px + sw + 1, py + ph - 8, fa(0xFFFFFF, 40));
         int iy = py + 28;
-        int rowH = Math.min(17, (ph - 34) / SECS.length);
+        int rowH = Math.min(17, (ph - 46) / SECS.length);
         for (int i = 0; i < SECS.length; i++) {
             final int idx = i;
             boolean on = sec == i;
@@ -57,7 +57,7 @@ public class DashboardScreen extends GlassScreen {
             iy += rowH;
         }
 
-        int cx = px + sw + 12, cy = py + 10, cw = pw - sw - 22, ch = ph - 20;
+        int cx = px + sw + 12, cy = py + 10, cw = pw - sw - 22, ch = ph - 32;
         text(g, SECS[sec], cx, cy, 0xFFFFFF);
         cy += 16;
         ch -= 16;
@@ -176,7 +176,7 @@ public class DashboardScreen extends GlassScreen {
         int ly = y + 78;
         box(g, x, ly, w, 28, 24);
         Icons.draw(g, last.modeEnum(), x + 6, ly + 4, 1, fa(last.modeEnum().rgb, 255));
-        text(g, last.won() ? "Win" : last.lost() ? "Loss" : "Draw", x + 24, ly + 5, last.won() ? 0x6fe3a0 : last.lost() ? 0xff7b7b : 0xffd36a);
+        text(g, last.won() ? "Win" : "Lose", x + 24, ly + 5, last.won() ? 0x6fe3a0 : last.lost() ? 0xff7b7b : 0xffd36a);
         textDim(g, "Last duel: " + last.opponent + "  " + last.duration(), x + 24, ly + 16);
         String key = "Reopen (" + DuelAnalyzerClient.lastKey.getTranslatedKeyMessage().getString() + ")";
         chip(g, key, x + w - tw(key) - 16, ly + 7, tw(key) + 10, false, () -> open(last));
@@ -189,7 +189,7 @@ public class DashboardScreen extends GlassScreen {
             empty(g, x, y, "Nothing to show yet.");
             return;
         }
-        textDim(g, "Hit rate of your last " + l.size() + " duels (green = win, red = loss)", x, y);
+        textDim(g, "Hit rate of your last " + l.size() + " duels (green = win, red = lose)", x, y);
         int bh = Math.min(120, h - 40);
         int bw = Math.max(6, Math.min(22, (w - 4) / l.size() - 3));
         g.fill(x, y + 14 + bh, x + w, y + 15 + bh, fa(0xFFFFFF, 60));
@@ -222,7 +222,7 @@ public class DashboardScreen extends GlassScreen {
             Icons.draw(g, d.modeEnum(), x + 7, yy + 5, 1, fa(d.modeEnum().rgb, 255));
             text(g, fit(d.opponent, 110), x + 24, yy + 3, 0xFFFFFF);
             textDim(g, d.modeEnum().label + (d.modeConfirmed ? "" : " (?)") + "  |  " + d.duration(), x + 24, yy + 13);
-            String r = d.won() ? "WIN" : d.lost() ? "LOSS" : "DRAW";
+            String r = d.won() ? "WIN" : "LOSE";
             text(g, r, x + w - tw(r) - 8, yy + 8, col);
             hit(x, yy, w, 23, () -> open(dd));
             yy += 26;
@@ -380,38 +380,83 @@ public class DashboardScreen extends GlassScreen {
         cards(g, l, x, y, w, h, 0xffd36a, "No records yet.");
     }
 
+    private int gMetric = 0;
+    private double gTarget = 55;
+    private static final String[] G_NAMES = {"Hit rate %", "Win rate %", "Win streak", "Best combo", "Wins"};
+    private static final double[] G_DEF = {55, 55, 5, 5, 10};
+
+    private double goalValue(int metric, String modeKey) {
+        Mode m = modeKey.isEmpty() ? null : Mode.byName(modeKey);
+        List<DuelRecord> l = Store.forMode(m);
+        Stats a = Stats.of(l);
+        Stats r = Stats.of(Stats.last(l, 20));
+        return switch (metric) {
+            case 0 -> r.hitRate * 100;
+            case 1 -> r.winRate() * 100;
+            case 2 -> a.bestStreak;
+            case 3 -> a.bestCombo;
+            default -> a.wins;
+        };
+    }
+
     private void goals(GuiGraphics g, int x, int y, int w, int h) {
-        List<DuelRecord> mode = Store.forMode(modeSel);
-        Stats last20 = Stats.of(Stats.last(mode, 20));
-        Stats all = Stats.of(mode);
-        boolean unlocked = last20.fights >= 5;
-        String[] names = {"Hit rate (last 20)", "Win rate (last 20)", "Win streak", "Best combo"};
-        double[][] tiers = {{50, 55, 60, 65}, {55, 60, 65, 70}, {5, 8, 12, 20}, {5, 7, 9, 12}};
-        double[] vals = {last20.hitRate * 100, last20.winRate() * 100, all.bestStreak, all.bestCombo};
-        boolean[] pct = {true, true, false, false};
-        int yy = y;
-        for (int i = 0; i < 4; i++) {
-            box(g, x, yy, w, 44, 20);
-            text(g, names[i], x + 8, yy + 5, 0xFFFFFF);
-            if (pct[i] && !unlocked) {
-                textDim(g, "Unlocks after 5 fights in this mode (" + last20.fights + "/5)", x + 8, yy + 20);
-            } else {
-                int reached = -1;
-                for (int t = 0; t < 4; t++) if (vals[i] >= tiers[i][t]) reached = t;
-                String cur = String.format(Locale.ROOT, pct[i] ? "%.0f%%" : "%.0f", vals[i]);
-                String tier = reached < 0 ? "No tier yet" : TIERS[reached];
-                text(g, cur, x + w - tw(cur) - 8, yy + 5, reached < 0 ? 0xFFFFFF : TIER_COL[reached]);
-                textDim(g, tier, x + 8, yy + 18);
-                int next = Math.min(3, reached + 1);
-                double lo = reached < 0 ? 0 : tiers[i][reached];
-                double hi = tiers[i][next];
-                double frac = reached == 3 ? 1 : (vals[i] - lo) / Math.max(1, hi - lo);
-                bar(g, x + 8, yy + 32, w - 16, 5, frac, TIER_COL[next]);
-                String tgt = "Next: " + TIERS[next] + " at " + String.format(Locale.ROOT, pct[i] ? "%.0f%%" : "%.0f", hi);
-                textDim(g, tgt, x + w - tw(tgt) - 8, yy + 18);
-            }
-            yy += 48;
+        final String key = modeSel == null ? "" : modeSel.name();
+        final boolean pct = gMetric < 2;
+        final double max = pct ? 100 : 999;
+        text(g, "New goal:", x, y + 3, 0xFFFFFF);
+        int cx = x + tw("New goal:") + 6;
+        int mw = tw(G_NAMES[gMetric]) + 14;
+        chip(g, G_NAMES[gMetric], cx, y, mw, true, () -> { gMetric = (gMetric + 1) % G_NAMES.length; gTarget = G_DEF[gMetric]; });
+        cx += mw + 6;
+        chip(g, "-5", cx, y, 20, false, () -> gTarget = Math.max(1, gTarget - 5));
+        cx += 23;
+        chip(g, "-", cx, y, 16, false, () -> gTarget = Math.max(1, gTarget - 1));
+        cx += 19;
+        String tv = String.format(Locale.ROOT, "%.0f", gTarget) + (pct ? "%" : "");
+        int tvw = Math.max(34, tw(tv) + 10);
+        box(g, cx, y, tvw, 14, 22);
+        textCenter(g, tv, cx + tvw / 2, y + 3, 0xFFFFFF);
+        cx += tvw + 3;
+        chip(g, "+", cx, y, 16, false, () -> gTarget = Math.min(max, gTarget + 1));
+        cx += 19;
+        chip(g, "+5", cx, y, 20, false, () -> gTarget = Math.min(max, gTarget + 5));
+        cx += 26;
+        chip(g, "Add goal", cx, y, tw("Add goal") + 14, true, () -> {
+            Store.Goal gl = new Store.Goal();
+            gl.metric = gMetric;
+            gl.target = gTarget;
+            gl.mode = key;
+            Store.cfg.goals.add(gl);
+            Store.saveCfg();
+        });
+
+        List<Store.Goal> mine = new ArrayList<>();
+        for (Store.Goal gl : Store.cfg.goals) if (gl.mode.equals(key)) mine.add(gl);
+        int ly = y + 22, lh = h - 22;
+        if (mine.isEmpty()) {
+            empty(g, x, ly, "No goals yet. Pick a stat and a target, then press Add goal.");
+            return;
         }
+        int total = mine.size() * 40;
+        scroll = Math.min(scroll, Math.max(0, total - lh));
+        setClip(g, x, ly, w, lh);
+        int by = ly - scroll;
+        for (Store.Goal gl : mine) {
+            double v = goalValue(gl.metric, gl.mode);
+            boolean pg = gl.metric < 2;
+            boolean done = v >= gl.target;
+            String tgt = String.format(Locale.ROOT, "%.0f", gl.target) + (pg ? "%" : "");
+            String cur = String.format(Locale.ROOT, "%.0f", v) + (pg ? "%" : "");
+            box(g, x, by, w, 36, 20);
+            g.fill(x, by, x + 2, by + 36, fa(done ? 0x6fe3a0 : accent(), 255));
+            text(g, G_NAMES[gl.metric] + ": reach " + tgt, x + 8, by + 5, done ? 0x6fe3a0 : 0xFFFFFF);
+            String st = cur + " / " + tgt + (done ? "  Done!" : "");
+            textDim(g, st, x + w - tw(st) - 30, by + 5);
+            bar(g, x + 8, by + 22, w - 16, 5, v / Math.max(1, gl.target), done ? 0x6fe3a0 : accent());
+            chip(g, "x", x + w - 22, by + 17, 14, false, () -> { Store.cfg.goals.remove(gl); Store.saveCfg(); });
+            by += 40;
+        }
+        endClip(g);
     }
 
     private void settings(GuiGraphics g, int x, int y, int w, int h) {
@@ -426,11 +471,11 @@ public class DashboardScreen extends GlassScreen {
             cx += cw + 4;
         }
         int yy = y + 36;
-        text(g, "Background dim: " + c.dim + "%", x, yy, 0xFFFFFF);
+        text(g, "Panel opacity: " + c.opacity + "%", x, yy, 0xFFFFFF);
         int bw = Math.min(200, w - 10);
-        bar(g, x, yy + 14, bw, 8, c.dim / 100.0, accent());
+        bar(g, x, yy + 14, bw, 8, c.opacity / 100.0, accent());
         hit(x, yy + 10, bw, 16, () -> {
-            c.dim = (int) Math.max(0, Math.min(100, (clickX - x) * 100.0 / bw));
+            c.opacity = (int) Math.max(20, Math.min(100, (clickX - x) * 100.0 / bw));
             Store.saveCfg();
         });
         yy += 34;
@@ -448,10 +493,10 @@ public class DashboardScreen extends GlassScreen {
 
     private void information(GuiGraphics g, int x, int y, int w, int h) {
         String[][] items = {
-                {"About", "Duel Analyzer v0.1.0 (preview). A client-side mod that records your PvP duels and explains them."},
+                {"About", "Duel Analyzer v0.1.1. A client-side mod that records your PvP duels and explains them."},
                 {"How it works", "1) Fight a player. 2) The mod records hits, damage and items silently. 3) The analysis opens after the fight."},
                 {"Keybinds", "K opens the menu, L shows the last duel analysis, O toggles the live overlay. Rebind them in Options, Controls, Key Binds."},
-                {"What is new", "v0.1.0: first preview with the dashboard, analysis screen, tips, goals and 11 modes."},
+                {"What is new", "v0.1.1: modes are detected from your inventory, Win or Lose only, your own goals, new Spear Mace mode, see-through menu. v0.1.0: first preview."},
         };
         int total = items.length * 50;
         scroll = Math.min(scroll, Math.max(0, total - h));

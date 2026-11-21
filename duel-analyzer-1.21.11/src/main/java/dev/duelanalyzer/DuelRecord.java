@@ -11,7 +11,7 @@ public class DuelRecord {
     public String mode = "SWORD";
     public double modeConf;
     public boolean modeConfirmed;
-    public String result = "DRAW";
+    public String result = "LOSE";
     public int ticks;
     public int hits, swings, weakHits, critHits, sprintHits, blockedByOpp, bestCombo;
     public int pearls, gapples, potions;
@@ -32,7 +32,7 @@ public class DuelRecord {
     }
 
     public boolean won() { return "WIN".equals(result); }
-    public boolean lost() { return "LOSS".equals(result); }
+    public boolean lost() { return !"WIN".equals(result); }
     public Mode modeEnum() { return Mode.byName(mode); }
 
     public double hitRate() {

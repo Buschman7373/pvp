@@ -33,7 +33,7 @@ public class AnalysisScreen extends GlassScreen {
     protected void drawContent(GuiGraphics g, int mx, int my) {
         int x = px + 14, y = py + 12, w = pw - 28;
         int resCol = d.won() ? 0x6fe3a0 : d.lost() ? 0xff7b7b : 0xffd36a;
-        String res = d.won() ? "VICTORY" : d.lost() ? "DEFEAT" : "NO RESULT";
+        String res = d.won() ? "WIN" : "LOSE";
 
         Mode m = d.modeEnum();
         Icons.draw(g, m, x, y - 2, 2, fa(m.rgb, 255));
@@ -115,23 +115,9 @@ public class AnalysisScreen extends GlassScreen {
             ty += 12;
         }
 
-        // set mode prompt
         int by = cy + 92;
-        if (by + 14 < py + ph) {
-            if (!d.modeConfirmed) {
-                text(g, "Set mode:", x, by + 3, 0xFFFFFF);
-                int bx = x + tw("Set mode:") + 6;
-                for (Mode mm : Mode.values()) {
-                    int cw2 = tw(mm.label) + 10;
-                    if (bx + cw2 > px + pw - 12) break;
-                    boolean on = mm.name().equals(d.mode);
-                    final Mode pick = mm;
-                    chip(g, mm.label, bx, by, cw2, on, () -> setMode(pick));
-                    bx += cw2 + 3;
-                }
-            } else {
-                textDim(g, "Mode confirmed: " + m.label, x, by + 3);
-            }
+        if (by + 14 < py + ph - 14) {
+            textDim(g, "Mode (detected from your inventory): " + m.label, x, by + 3);
         }
     }
 

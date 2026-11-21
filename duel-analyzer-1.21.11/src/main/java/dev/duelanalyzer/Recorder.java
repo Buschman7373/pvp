@@ -5,6 +5,7 @@ import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.DeathScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -15,6 +16,7 @@ import net.minecraft.world.phys.Vec3;
 public final class Recorder {
     private static DuelRecord cur;
     private static Player opp;
+    private static Player tracked;
     private static int tick, startTick, lastCombat, combo, readyTick;
     private static int lastPearl = -99, lastGap = -99, lastPot = -99;
     private static float lastHp = 20f, oppHp = 20f;
@@ -53,6 +55,7 @@ public final class Recorder {
         cur.server = ModeDetector.serverKey(mc);
         cur.startDist = mc.player.distanceTo(target);
         opp = target;
+        tracked = mc.player;
         startTick = tick;
         lastCombat = tick;
         combo = 0;
@@ -117,6 +120,11 @@ public final class Recorder {
         }
         if (cur == null) return;
 
+        if (me != tracked || mc.screen instanceof DeathScreen) {
+            end(mc, mc.screen instanceof DeathScreen || lastHp < oppHp ? "LOSE" : "WIN", 40);
+            return;
+        }
+
         float hp = me.getHealth();
         if (hp < lastHp) {
             float lost = lastHp - hp;
@@ -135,13 +143,13 @@ public final class Recorder {
         if (opp != null) oppHp = opp.getHealth() > 0 ? opp.getHealth() : oppHp;
 
         if (hp <= 0 || me.isDeadOrDying()) {
-            end(mc, "LOSS", 40);
+            end(mc, "LOSE", 40);
         } else if (opp != null && (opp.getHealth() <= 0 || opp.isDeadOrDying())) {
             end(mc, "WIN", 30);
         } else if (opp != null && opp.isRemoved()) {
-            end(mc, oppHp <= 6f && tick - lastCombat < 100 ? "WIN" : "DRAW", 30);
+            end(mc, oppHp <= 6f && tick - lastCombat < 100 ? "WIN" : (lastHp >= oppHp ? "WIN" : "LOSE"), 30);
         } else if (tick - lastCombat > 160) {
-            end(mc, "DRAW", 0);
+            end(mc, lastHp >= oppHp ? "WIN" : "LOSE", 0);
         }
 
         if (Store.cfg.overlay && cur != null && tick % 10 == 0) {
@@ -160,8 +168,8 @@ public final class Recorder {
         ModeDetector.Guess g = endGuess.conf() > startGuess.conf() ? endGuess : startGuess;
         d.mode = g.mode().name();
         d.modeConf = g.conf();
-        d.modeConfirmed = g.conf() >= 0.9;
-        if (result.equals("DRAW") && d.hits < 3) return; // not a real duel
+        d.modeConfirmed = true;
+        if (delay == 0 && d.hits < 3) return; // timeout without a real fight
         Store.add(d);
         pending = d;
         readyTick = tick + delay;

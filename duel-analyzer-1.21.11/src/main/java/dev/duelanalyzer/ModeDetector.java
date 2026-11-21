@@ -26,8 +26,6 @@ public final class ModeDetector {
 
     public static Guess detect(Minecraft mc, Player p) {
         String server = serverKey(mc);
-        String saved = Store.cfg.serverModes.get(server);
-        if (!server.isEmpty() && saved != null) return new Guess(Mode.byName(saved), 0.9);
 
         boolean mace = false, spear = false, crystal = false, obsidian = false, cart = false, tnt = false;
         boolean sword = false, axe = false, bow = false, gapple = false, shield = false;
@@ -62,7 +60,8 @@ public final class ModeDetector {
         Guess byClue = fromText(clue);
 
         Guess byGear;
-        if (mace) byGear = new Guess(Mode.MACE, 0.8);
+        if (mace && spear) byGear = new Guess(Mode.SPEAR_MACE, 0.9);
+        else if (mace) byGear = new Guess(Mode.MACE, 0.8);
         else if (spear) byGear = new Guess(Mode.SPEAR, 0.8);
         else if (crystal && obsidian) byGear = new Guess(Mode.CRYSTAL, 0.85);
         else if (cart && tnt) byGear = new Guess(Mode.CART, 0.85);
@@ -78,7 +77,7 @@ public final class ModeDetector {
         else if (axe) byGear = new Guess(Mode.AXE, 0.45);
         else byGear = new Guess(Mode.SMP, 0.25);
 
-        if (byClue != null && byClue.conf > byGear.conf) return byClue;
+        if (byClue != null && byGear.conf < 0.5) return byClue;
         return byGear;
     }
 

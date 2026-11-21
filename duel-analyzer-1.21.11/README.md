@@ -22,5 +22,5 @@ Stored locally in `config/duelanalyzer/` (one small JSON file per duel + `config
 Delete a file to delete that duel.
 
 ## Modes
-Sword, Axe, Mace, Spear, Crystal, Netherite Pot, Diamond Pot, UHC, SMP, Diamond SMP, Cart.
-Detected from gear, scoreboard/chat clues and per-server rules you confirm after a fight.
+Sword, Axe, Mace, Spear, Spear Mace, Crystal, Netherite Pot, Diamond Pot, UHC, SMP, Diamond SMP, Cart.
+Detected automatically from the items in your inventory.

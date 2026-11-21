@@ -25,12 +25,20 @@ public final class Store {
 
     public static class Cfg {
         public int theme = 0;
-        public int dim = 35;
+        public int opacity = 80;
         public boolean anims = true;
         public boolean overlay = false;
         public String tipsMode = "offline";
         public List<String> tipHistory = new ArrayList<>();
         public Map<String, String> serverModes = new HashMap<>();
+        public List<Goal> goals = new ArrayList<>();
+    }
+
+    /** A goal the player sets themselves. metric: 0 hit rate %, 1 win rate %, 2 win streak, 3 best combo, 4 wins. */
+    public static class Goal {
+        public int metric;
+        public double target;
+        public String mode = "";
     }
 
     public static void init() {
@@ -42,13 +50,18 @@ public final class Store {
             if (Files.exists(c)) {
                 Cfg loaded = GSON.fromJson(Files.readString(c), Cfg.class);
                 if (loaded != null) cfg = loaded;
+                if (cfg.goals == null) cfg.goals = new ArrayList<>();
             }
             try (Stream<Path> s = Files.list(duelDir)) {
                 for (Path p : (Iterable<Path>) s::iterator) {
                     if (!p.toString().endsWith(".json")) continue;
                     try {
                         DuelRecord d = GSON.fromJson(Files.readString(p), DuelRecord.class);
-                        if (d != null && d.id != null) duels.add(d);
+                        if (d != null && d.id != null) {
+                            if (!d.won() && !d.lost()) d.result = "LOSE";
+                            d.modeConfirmed = true;
+                            duels.add(d);
+                        }
                     } catch (Exception ignored) {
                     }
                 }

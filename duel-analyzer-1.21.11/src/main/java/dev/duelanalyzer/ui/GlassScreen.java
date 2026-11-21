@@ -31,7 +31,6 @@ public abstract class GlassScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float delta) {
-        super.render(g, mx, my, delta);
         boxes.clear();
         actions.clear();
         clip = null;
@@ -42,17 +41,21 @@ public abstract class GlassScreen extends Screen {
             p = 1f;
         }
         Theme th = theme();
-        g.fillGradient(0, 0, width, height, 0xFF000000 | th.bg1, 0xFF000000 | th.bg2);
-        g.fill(0, 0, width, height, ((Store.cfg.dim * 255 / 100) << 24));
 
         pw = Math.min(width - 16, 580);
         ph = Math.min(height - 16, 310);
         px = (width - pw) / 2;
         py = (height - ph) / 2 + (int) ((1f - p) * 16);
-        box(g, px, py, pw, ph, 30);
+        g.fill(px, py, px + pw, py + ph, fa(th.bg1, Store.cfg.opacity * 255 / 100));
+        box(g, px, py, pw, ph, 12);
         g.renderOutline(px, py, pw, ph, fa(0xFFFFFF, 60));
         drawContent(g, mx, my);
+        String made = "Made by Buschman48";
+        textDim(g, made, px + pw / 2 - tw(made) / 2, py + ph - 12);
     }
+
+    @Override
+    public boolean isPauseScreen() { return false; }
 
     // ---------- helpers ----------
 

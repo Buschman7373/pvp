@@ -9,6 +9,8 @@ public enum Mode {
             "Smash only after a full fall, then back off."),
     SPEAR("Spear", 0xb8f26b, "Poor spacing with the spear",
             "Stay at the tip of your reach and back off right after each poke."),
+    SPEAR_MACE("Spear Mace", 0x9ef0e0, "Wrong weapon for the moment",
+            "Poke with the spear to keep range, switch to the mace only for a full-fall smash."),
     CRYSTAL("Crystal", 0xff7bd5, "Slow crystal placement",
             "Pre-place crystals before the opponent closes in."),
     NETHERITE_POT("Netherite Pot", 0xb3a5d6, "Late potion and gapple use",
